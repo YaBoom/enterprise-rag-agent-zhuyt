@@ -1,0 +1,12 @@
+/* 简单的样式 */
+* {
+  box-sizing: border-box;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:active {
+  opacity: 0.8;
+}
