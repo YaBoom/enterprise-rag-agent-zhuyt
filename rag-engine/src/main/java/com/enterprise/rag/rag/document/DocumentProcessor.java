@@ -51,7 +51,7 @@ public class DocumentProcessor {
                 .chunkIndex(i)
                 .metadata(new HashMap<>())
                 .createdAt(LocalDateTime.now())
-                .updatedAt(LocalTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
             
             documents.add(doc);
