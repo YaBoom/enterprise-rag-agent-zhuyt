@@ -1,36 +1,36 @@
 server:
-  port: 8080
+  port: 8089
 
 spring:
   application:
     name: enterprise-rag-engine
-  
+
   # OpenAI 配置
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:your-api-key}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${OPENAI_API_KEY:sk-a5f788a3a1af4ff79f5f8f18f7c62df0}
+      base-url: ${OPENAI_BASE_URL:https://api.deepseek.com/v1}
       embedding:
         options:
-          model: text-embedding-ada-002
+          model: deepseek-embedding
       chat:
         options:
-          model: gpt-4-turbo
+          model: deepseek-v4-flash
           temperature: 0.7
-    
+
     # Milvus 配置
     milvus:
       host: ${MILVUS_HOST:localhost}
       port: ${MILVUS_PORT:19530}
       database: ${MILVUS_DATABASE:default}
-      collection-name: enterprise_knowledge
+      collection-name: vector_store_02
 
 # RAG 配置
 rag:
   document:
     chunk-size: 1000
     chunk-overlap: 200
-  
+
   retrieval:
     top-k: 5
     score-threshold: 0.7

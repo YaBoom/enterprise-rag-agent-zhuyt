@@ -69,16 +69,29 @@ public class RetrievalService {
             .collectionName(collectionName)
             .data(Collections.singletonList(new FloatVec(queryEmbedding)))
             .topK(topK)
-            .outputFields(Arrays.asList("id", "content", "title", "source", "type"))
+            .outputFields(Arrays.asList("id", "content", "title", "source", "type", "embedding"))
             .build();
 
         SearchResp searchResp = milvusClient.search(searchReq);
 
         List<Document> documents = new ArrayList<>();
-        List<SearchResp.SearchResult> results = searchResp.getResult();
+        List<List<SearchResp.SearchResult>> searchResults = searchResp.getSearchResults();
+        List<SearchResp.SearchResult> results = searchResults.isEmpty() ? Collections.emptyList() : searchResults.get(0);
         
         for (SearchResp.SearchResult result : results) {
             Map<String, Object> fields = result.getEntity();
+            
+            float[] embedding = null;
+            Object embObj = fields.get("embedding");
+            if (embObj instanceof List<?>) {
+                List<?> embList = (List<?>) embObj;
+                embedding = new float[embList.size()];
+                for (int i = 0; i < embList.size(); i++) {
+                    embedding[i] = ((Number) embList.get(i)).floatValue();
+                }
+            } else if (embObj instanceof float[]) {
+                embedding = (float[]) embObj;
+            }
             
             Document doc = Document.builder()
                 .id((String) fields.get("id"))
@@ -86,7 +99,7 @@ public class RetrievalService {
                 .title((String) fields.get("title"))
                 .source((String) fields.get("source"))
                 .type((String) fields.get("type"))
-                .embedding(result.getEmbedding())
+                .embedding(embedding)
                 .build();
             
             documents.add(doc);
