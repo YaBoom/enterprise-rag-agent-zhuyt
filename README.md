@@ -94,15 +94,17 @@
 ### Phase 1：基础RAG引擎（当前）
 - [x] 文档解析（PDF、Word、Markdown、TXT）
 - [x] 智能切片（语义感知分块）
-- [x] 向量嵌入（OpenAI Embedding）
-- [x] 向量检索（Milvus）
-- [x] 基础问答
+- [x] 向量嵌入（OpenAI 兼容 Embedding）
+- [x] 向量入库与检索（Milvus）
+- [x] 基础问答（ChatClient 生成）
+- [x] 前端聊天界面 + 文档上传
 
 ### Phase 2：高级RAG优化
 - [ ] 混合检索（Vector + BM25）
 - [ ] Query改写与扩展
-- [ ] Rerank重排序
-- [ ] 上下文窗口优化
+- [x] Rerank重排序（分数排序 + 多样性）
+- [ ] 上下文窗口优化（token 预算）
+- [ ] 流式问答
 
 ### Phase 3：企业级特性
 - [ ] 多租户支持
@@ -155,25 +157,56 @@
 
 ```
 enterprise-rag-agent-zhuyt/
-├── rag-engine/                    # Java RAG核心引擎（唯一）
+├── rag-engine/                    # Java RAG核心引擎
 │   ├── src/main/java/
-│   │   ├── config/              # SpringAI配置
+│   │   ├── config/              # 配置（RagProperties、Milvus）
 │   │   ├── controller/          # API接口
-│   │   ├── service/             # 核心服务
+│   │   ├── service/             # RagService 编排
 │   │   ├── rag/                 # RAG实现
 │   │   │   ├── document/        # 文档解析
 │   │   │   ├── embedding/       # 向量嵌入
 │   │   │   ├── retrieval/       # 检索服务
-│   │   │   └── rerank/          # 重排序
+│   │   │   ├── rerank/          # 重排序
+│   │   │   └── vectorstore/     # Milvus 入库
 │   │   └── model/               # 数据模型
 │   ├── pom.xml
 │   └── application.yml
 │
-├── docs/
-│   └── architecture.md           # 架构文档
+├── frontend/                      # React 聊天界面
+│   ├── src/App.tsx
+│   └── vite.config.ts
 │
-└── README.md                     # 项目说明
+├── docker-compose.yml             # Milvus 本地部署
+├── .env.example                   # 环境变量模板
+├── docs/
+│   └── architecture.md
+│
+└── README.md
 ```
+
+---
+
+## 🚀 快速启动
+
+```powershell
+# 1. 启动 Milvus
+docker compose up -d
+
+# 2. 配置环境变量
+Copy-Item .env.example .env
+# 编辑 .env，填入 OPENAI_API_KEY
+
+# 3. 启动后端（端口 8089）
+cd rag-engine
+mvn spring-boot:run
+
+# 4. 启动前端（端口 3000）
+cd frontend
+npm install
+npm run dev
+```
+
+浏览器打开 http://localhost:3000 → 上传文档 → 提问测试。
 
 ---
 
