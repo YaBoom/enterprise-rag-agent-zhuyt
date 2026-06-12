@@ -1,11 +1,13 @@
 package com.enterprise.rag.controller;
 
+import com.enterprise.rag.config.AiConfigLogger;
 import com.enterprise.rag.config.DotenvLoader;
 import com.enterprise.rag.model.ApiResult;
 import com.enterprise.rag.model.QueryRequest;
 import com.enterprise.rag.model.QueryResponse;
 import com.enterprise.rag.service.RagService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +24,12 @@ public class RagController {
 
     @Autowired
     private RagService ragService;
+
+    @Value("${spring.ai.openai.embedding.base-url:}")
+    private String embeddingBaseUrl;
+
+    @Value("${spring.ai.openai.embedding.embeddings-path:}")
+    private String embeddingsPath;
 
     @PostMapping("/documents")
     public ApiResult<RagService.UploadResult> uploadDocument(@RequestParam("file") MultipartFile file) {
@@ -73,8 +81,12 @@ public class RagController {
         }
         String msg = root.getMessage();
         if (msg != null && msg.contains("HTTP 404")) {
-            return "Embedding API 返回 404：请检查 OPENAI_EMBEDDING_BASE_URL、"
-                + "OPENAI_EMBEDDING_MODEL 是否正确；DashScope 需配置 embeddings-path=/embeddings（见 INC-007）";
+            return "Embedding API 返回 404：DashScope 需 base-url 含 /v1 且 path=/embeddings，"
+                + "实际 URL 见启动日志或 GET /health 的 embeddingUrl（见 INC-010）";
+        }
+        if (msg != null && msg.contains("batch size is invalid")) {
+            return "Embedding 批量超限：DashScope text-embedding-v4 单次最多 10 条，"
+                + "请确认 rag.embedding.batch-size≤10 并已重启后端（见 INC-009）";
         }
         return e.getMessage() != null ? e.getMessage() : root.getClass().getSimpleName();
     }
@@ -82,10 +94,14 @@ public class RagController {
     @GetMapping("/health")
     public ApiResult<Map<String, String>> health() {
         String aiStatus = DotenvLoader.hasOpenAiApiKey() ? "CONFIGURED" : "MISSING_API_KEY";
+        String embeddingUrl = AiConfigLogger.resolveEmbeddingUrl(embeddingBaseUrl, embeddingsPath);
         return ApiResult.ok(Map.of(
             "status", "UP",
             "service", "enterprise-rag-engine",
-            "openai", aiStatus
+            "openai", aiStatus,
+            "embeddingPath", embeddingsPath.isBlank() ? "(default /v1/embeddings)" : embeddingsPath,
+            "embeddingUrl", embeddingUrl,
+            "envFile", DotenvLoader.findEnvFile().map(p -> p.toAbsolutePath().toString()).orElse("NOT_FOUND")
         ));
     }
 }

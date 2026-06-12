@@ -33,6 +33,7 @@ public class RagEngineApplication {
         SpringApplication app = new SpringApplication(RagEngineApplication.class);
         Map<String, Object> defaults = new HashMap<>();
         defaults.put("spring.ai.openai.embedding.embeddings-path", "/embeddings");
+        applyDashScopeDefaults(defaults);
 
         if (!DotenvLoader.hasOpenAiApiKey()) {
             System.err.println("[Config] OPENAI_API_KEY 未配置，跳过 OpenAI 自动配置（嵌入/问答不可用，健康检查仍可用）");
@@ -55,5 +56,12 @@ public class RagEngineApplication {
         System.out.println("[Config] embedding baseUrl=" + DotenvLoader.resolve("OPENAI_EMBEDDING_BASE_URL")
             + ", model=" + DotenvLoader.resolve("OPENAI_EMBEDDING_MODEL")
             + ", embeddings-path=/embeddings");
+    }
+
+    private static void applyDashScopeDefaults(Map<String, Object> defaults) {
+        String embedBase = DotenvLoader.resolve("OPENAI_EMBEDDING_BASE_URL");
+        if (embedBase != null && embedBase.contains("dashscope")) {
+            defaults.put("spring.ai.openai.embedding.base-url", embedBase);
+        }
     }
 }

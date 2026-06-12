@@ -1,5 +1,6 @@
 package com.enterprise.rag.rag.embedding;
 
+import com.enterprise.rag.config.RagProperties;
 import com.enterprise.rag.model.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ public class EmbeddingService {
     @Autowired(required = false)
     private EmbeddingModel embeddingModel;
 
+    @Autowired
+    private RagProperties ragProperties;
+
     /**
      * 为文档生成向量嵌入
      */
@@ -34,22 +38,28 @@ public class EmbeddingService {
     }
 
     /**
-     * 批量生成向量嵌入
+     * 批量生成向量嵌入（按 API batch 上限分批调用）
      */
     public List<Document> embedDocuments(List<Document> documents) {
         if (embeddingModel == null) {
             throw new IllegalStateException("EmbeddingModel 未配置");
         }
-
-        List<String> contents = new ArrayList<>();
-        for (Document doc : documents) {
-            contents.add(doc.getContent());
+        if (documents.isEmpty()) {
+            return documents;
         }
 
-        List<float[]> embeddings = embeddingModel.embed(contents);
+        int batchSize = Math.max(1, ragProperties.getEmbedding().getBatchSize());
+        for (int offset = 0; offset < documents.size(); offset += batchSize) {
+            int end = Math.min(offset + batchSize, documents.size());
+            List<String> contents = new ArrayList<>(end - offset);
+            for (int i = offset; i < end; i++) {
+                contents.add(documents.get(i).getContent());
+            }
 
-        for (int i = 0; i < documents.size(); i++) {
-            documents.get(i).setEmbedding(embeddings.get(i));
+            List<float[]> embeddings = embeddingModel.embed(contents);
+            for (int i = 0; i < embeddings.size(); i++) {
+                documents.get(offset + i).setEmbedding(embeddings.get(i));
+            }
         }
 
         return documents;

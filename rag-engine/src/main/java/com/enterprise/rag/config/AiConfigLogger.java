@@ -35,5 +35,31 @@ public class AiConfigLogger implements CommandLineRunner {
         log.info("[AI Config] chat baseUrl={}, model={}", chatBaseUrl, chatModel);
         log.info("[AI Config] embedding baseUrl={}, path={}, model={}, dimensions={}",
             embeddingBaseUrl, embeddingsPath, embeddingModel, embeddingDimensions);
+
+        String resolvedUrl = resolveEmbeddingUrl(embeddingBaseUrl, embeddingsPath);
+        log.info("[AI Config] embedding 实际请求 URL={}", resolvedUrl);
+
+        if (resolvedUrl.contains("dashscope") && resolvedUrl.contains("/compatible-mode/embeddings")) {
+            log.error("[AI Config] DashScope URL 缺少 /v1，上传必 404！base-url 应为 .../compatible-mode/v1（见 INC-010）");
+        }
+        if (resolvedUrl.contains("/v1/v1/")) {
+            log.error("[AI Config] 检测到双 /v1 路径，上传必 404！（见 INC-010）");
+        }
+        if (DotenvLoader.findEnvFile().isEmpty()) {
+            log.warn("[AI Config] 未找到 .env，IDE 调试请使用 .vscode/launch.json 或确认 cwd 为项目根目录");
+        }
+    }
+
+    /** Spring AI RestClient 实际请求 = baseUrl + embeddingsPath（不会自动补 /v1） */
+    public static String resolveEmbeddingUrl(String baseUrl, String path) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "(empty)";
+        }
+        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String suffix = (path == null || path.isBlank()) ? "/v1/embeddings" : path;
+        if (!suffix.startsWith("/")) {
+            suffix = "/" + suffix;
+        }
+        return normalized + suffix;
     }
 }

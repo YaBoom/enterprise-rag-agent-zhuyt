@@ -37,5 +37,7 @@ public class RagProperties {
     @Data
     public static class Embedding {
         private int dimension = 1536;
+        /** DashScope text-embedding-v4 单次最多 10 条 */
+        private int batchSize = 10;
     }
 }
