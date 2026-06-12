@@ -20,6 +20,8 @@ import java.util.Map;
 public class Document {
 
     private String id;
+    /** 同一上传文件的所有切片共享此 ID */
+    private String documentId;
     private String content;
     private String title;
     private String source;

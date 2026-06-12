@@ -38,6 +38,13 @@ public class RerankService {
                 pairs.sort((a, b) -> Double.compare(b.score, a.score));
         }
 
+        for (DocumentScorePair pair : pairs) {
+            if (pair.document.getMetadata() == null) {
+                pair.document.setMetadata(new HashMap<>());
+            }
+            pair.document.getMetadata().put("score", pair.score);
+        }
+
         return pairs.stream()
             .limit(topN)
             .map(pair -> pair.document)

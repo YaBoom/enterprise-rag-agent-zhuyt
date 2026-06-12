@@ -1,5 +1,6 @@
 package com.enterprise.rag.rag.retrieval;
 
+import com.enterprise.rag.config.RagProperties;
 import com.enterprise.rag.model.Document;
 import com.enterprise.rag.model.RetrievalResult;
 import com.enterprise.rag.rag.embedding.EmbeddingService;
@@ -7,18 +8,16 @@ import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.FloatVec;
 import io.milvus.v2.service.vector.response.SearchResp;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 检索服务
- * 
- * @author jack.zhu
  */
+@Slf4j
 @Service
 public class RetrievalService {
 
@@ -28,83 +27,91 @@ public class RetrievalService {
     @Autowired
     private EmbeddingService embeddingService;
 
-    @Value("${rag.collection.name:enterprise_knowledge}")
-    private String collectionName;
+    @Autowired
+    private RagProperties ragProperties;
 
-    /**
-     * 执行检索
-     */
     public RetrievalResult retrieve(String query, Integer topK, String strategy) {
         long startTime = System.currentTimeMillis();
+        int effectiveTopK = topK != null ? topK : ragProperties.getRetrieval().getTopK();
+        double scoreThreshold = ragProperties.getRetrieval().getScoreThreshold();
 
-        List<Document> documents = vectorSearch(query, topK);
-        List<Double> scores = documents.stream()
-            .map(doc -> embeddingService.cosineSimilarity(
-                embeddingService.embedQuery(query),
-                doc.getEmbedding()
-            ))
-            .collect(Collectors.toList());
+        List<Document> documents = vectorSearch(query, effectiveTopK);
+        List<Double> scores = new ArrayList<>();
+
+        List<Document> filtered = new ArrayList<>();
+        for (Document doc : documents) {
+            double score = doc.getMetadata() != null && doc.getMetadata().get("score") instanceof Number
+                ? ((Number) doc.getMetadata().get("score")).doubleValue()
+                : 0.0;
+            if (score >= scoreThreshold) {
+                filtered.add(doc);
+                scores.add(score);
+            }
+        }
 
         long retrievalTime = System.currentTimeMillis() - startTime;
+        log.debug("[Retrieval] strategy={}, hits={}, filtered={}", strategy, documents.size(), filtered.size());
 
         return RetrievalResult.builder()
-            .documents(documents)
+            .documents(filtered)
             .scores(scores)
             .retrievalTime(retrievalTime)
-            .retrievalStrategy(strategy)
+            .retrievalStrategy(strategy != null ? strategy : "VECTOR")
             .build();
     }
 
-    /**
-     * 向量检索
-     */
     private List<Document> vectorSearch(String query, Integer topK) {
         if (milvusClient == null) {
             throw new IllegalStateException("MilvusClient 未配置");
         }
 
         float[] queryEmbedding = embeddingService.embedQuery(query);
+        String collectionName = ragProperties.getCollection().getName();
 
         SearchReq searchReq = SearchReq.builder()
             .collectionName(collectionName)
             .data(Collections.singletonList(new FloatVec(queryEmbedding)))
             .topK(topK)
-            .outputFields(Arrays.asList("id", "content", "title", "source", "type", "embedding"))
+            .outputFields(Arrays.asList("id", "content", "title", "source", "type", "document_id", "chunk_index"))
             .build();
 
         SearchResp searchResp = milvusClient.search(searchReq);
-
         List<Document> documents = new ArrayList<>();
+
         List<List<SearchResp.SearchResult>> searchResults = searchResp.getSearchResults();
-        List<SearchResp.SearchResult> results = searchResults.isEmpty() ? Collections.emptyList() : searchResults.get(0);
-        
+        List<SearchResp.SearchResult> results = searchResults.isEmpty()
+            ? Collections.emptyList()
+            : searchResults.get(0);
+
         for (SearchResp.SearchResult result : results) {
             Map<String, Object> fields = result.getEntity();
-            
-            float[] embedding = null;
-            Object embObj = fields.get("embedding");
-            if (embObj instanceof List<?>) {
-                List<?> embList = (List<?>) embObj;
-                embedding = new float[embList.size()];
-                for (int i = 0; i < embList.size(); i++) {
-                    embedding[i] = ((Number) embList.get(i)).floatValue();
-                }
-            } else if (embObj instanceof float[]) {
-                embedding = (float[]) embObj;
-            }
-            
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("score", result.getScore());
+
             Document doc = Document.builder()
-                .id((String) fields.get("id"))
-                .content((String) fields.get("content"))
-                .title((String) fields.get("title"))
-                .source((String) fields.get("source"))
-                .type((String) fields.get("type"))
-                .embedding(embedding)
+                .id(stringValue(fields.get("id")))
+                .documentId(stringValue(fields.get("document_id")))
+                .content(stringValue(fields.get("content")))
+                .title(stringValue(fields.get("title")))
+                .source(stringValue(fields.get("source")))
+                .type(stringValue(fields.get("type")))
+                .chunkIndex(intValue(fields.get("chunk_index")))
+                .metadata(metadata)
                 .build();
-            
             documents.add(doc);
         }
 
         return documents;
+    }
+
+    private String stringValue(Object value) {
+        return value != null ? String.valueOf(value) : "";
+    }
+
+    private Integer intValue(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return 0;
     }
 }

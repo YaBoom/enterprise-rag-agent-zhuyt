@@ -22,6 +22,15 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
+# 环境变量
+.env
+.env.local
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
 # 其他
 *.swp
 *.bak

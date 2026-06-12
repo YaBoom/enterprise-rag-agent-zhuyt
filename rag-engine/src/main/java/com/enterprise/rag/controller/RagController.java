@@ -1,5 +1,7 @@
 package com.enterprise.rag.controller;
 
+import com.enterprise.rag.config.DotenvLoader;
+import com.enterprise.rag.model.ApiResult;
 import com.enterprise.rag.model.QueryRequest;
 import com.enterprise.rag.model.QueryResponse;
 import com.enterprise.rag.service.RagService;
@@ -9,11 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * RAG API 控制器
- * 
- * @author jack.zhu
  */
 @RestController
 @RequestMapping("/api/v1/rag")
@@ -22,56 +23,69 @@ public class RagController {
     @Autowired
     private RagService ragService;
 
-    /**
-     * 上传文档
-     */
     @PostMapping("/documents")
-    public String uploadDocument(@RequestParam("file") MultipartFile file) {
+    public ApiResult<RagService.UploadResult> uploadDocument(@RequestParam("file") MultipartFile file) {
         try {
-            ragService.uploadDocument(file);
-            return "✅ 文档上传成功：" + file.getOriginalFilename();
+            RagService.UploadResult result = ragService.uploadDocument(file);
+            return ApiResult.ok("文档上传成功", result);
         } catch (Exception e) {
-            return "❌ 文档上传失败：" + e.getMessage();
+            return ApiResult.fail("文档上传失败：" + formatUploadError(e));
         }
     }
 
-    /**
-     * 查询问答
-     */
     @PostMapping("/query")
-    public QueryResponse query(@RequestBody QueryRequest request) {
-        return ragService.query(request);
+    public ApiResult<QueryResponse> query(@RequestBody QueryRequest request) {
+        try {
+            return ApiResult.ok(ragService.query(request));
+        } catch (Exception e) {
+            return ApiResult.fail("查询失败：" + e.getMessage());
+        }
     }
 
-    /**
-     * 流式问答
-     */
     @PostMapping(value = "/query/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public String queryStream(@RequestBody QueryRequest request) {
-        return "流式问答待实现";
+    public ApiResult<String> queryStream(@RequestBody QueryRequest request) {
+        return ApiResult.fail("流式问答待实现");
     }
 
-    /**
-     * 获取文档列表
-     */
     @GetMapping("/documents")
-    public List<String> getDocuments(@RequestParam(required = false) String tenantId) {
-        return List.of("文档列表待实现");
+    public ApiResult<List<String>> getDocuments(@RequestParam(required = false) String tenantId) {
+        try {
+            return ApiResult.ok(ragService.listDocuments());
+        } catch (Exception e) {
+            return ApiResult.fail("获取文档列表失败：" + e.getMessage());
+        }
     }
 
-    /**
-     * 删除文档
-     */
     @DeleteMapping("/documents/{documentId}")
-    public String deleteDocument(@PathVariable String documentId) {
-        return "文档删除待实现：" + documentId;
+    public ApiResult<Map<String, String>> deleteDocument(@PathVariable String documentId) {
+        try {
+            ragService.deleteDocument(documentId);
+            return ApiResult.ok("文档删除成功", Map.of("documentId", documentId));
+        } catch (Exception e) {
+            return ApiResult.fail("文档删除失败：" + e.getMessage());
+        }
     }
 
-    /**
-     * 健康检查
-     */
+    private String formatUploadError(Exception e) {
+        Throwable root = e;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String msg = root.getMessage();
+        if (msg != null && msg.contains("HTTP 404")) {
+            return "Embedding API 返回 404：请检查 OPENAI_EMBEDDING_BASE_URL、"
+                + "OPENAI_EMBEDDING_MODEL 是否正确；DashScope 需配置 embeddings-path=/embeddings（见 INC-007）";
+        }
+        return e.getMessage() != null ? e.getMessage() : root.getClass().getSimpleName();
+    }
+
     @GetMapping("/health")
-    public String health() {
-        return "✅ RAG Engine 运行正常";
+    public ApiResult<Map<String, String>> health() {
+        String aiStatus = DotenvLoader.hasOpenAiApiKey() ? "CONFIGURED" : "MISSING_API_KEY";
+        return ApiResult.ok(Map.of(
+            "status", "UP",
+            "service", "enterprise-rag-engine",
+            "openai", aiStatus
+        ));
     }
 }
