@@ -183,8 +183,3 @@ npm run dev
 ```
 
 浏览器打开 http://localhost:3000 → 上传文档 → 提问测试。
-
----
-
-**创建时间**: 2026-06-04  
-**技术栈**: Java 21 + SpringAI + LangChain4j（单一聚焦）  
