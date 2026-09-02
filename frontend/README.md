@@ -1,81 +1,66 @@
 # Enterprise RAG Agent 前端
 
-> 最小化前端（10%精力） - 使用 Ant Design X 快速搭建 AI Chat UI
+基于 React 18 + Ant Design X 的聊天界面，提供问答与文档上传，通过 Vite 代理调用后端 API。
 
 ## 技术栈
 
-- **React 18** - 前端框架
-- **TypeScript** - 类型安全
-- **Vite** - 构建工具
-- **Ant Design X** - AI Chat UI 组件库（阿里蚂蚁出品）
-- **Axios** - HTTP 请求
+- React 18、TypeScript、Vite
+- Ant Design X：AI 聊天组件（`Bubble`、`Sender`、`useXAgent`、`useXChat`）
+- Ant Design：布局与上传组件
+- Axios：HTTP 请求
 
 ## 快速开始
 
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器
-npm run dev
-
-# 访问 http://localhost:3000
+npm run dev      # http://localhost:3000
 ```
 
-## 架构设计
+开发服务器已在 `vite.config.ts` 中配置 `/api` 代理到后端 `http://localhost:8089`。
 
-### 为什么选择 Ant Design X？
-
-1. ✅ **5分钟快速集成** - 开箱即用的 AI Chat 组件
-2. ✅ **阿里蚂蚁出品** - 企业级标准，中文友好
-3. ✅ **React 生态** - 与 Java 后端架构一致
-4. ✅ **最小化学习成本** - 10%精力即可完成
-
-### 目录结构
+## 目录结构
 
 ```
 frontend/
 ├── src/
-│   ├── App.tsx          # 主应用（聊天界面）
-│   ├── main.tsx         # 入口文件
+│   ├── App.tsx          # 主应用（聊天界面 + 文档上传）
+│   ├── main.tsx         # 入口
+│   ├── App.css          # 组件样式
 │   └── index.css        # 全局样式
-├── index.html           # HTML 模板
-├── vite.config.ts       # Vite 配置
-├── tsconfig.json        # TypeScript 配置
-└── package.json         # 依赖管理
+├── index.html
+├── vite.config.ts       # 端口与 /api 代理配置
+├── tsconfig.json
+└── package.json
 ```
 
-## 功能特性
+## 功能
 
-### 已实现
-- ✅ AI 问答聊天界面
-- ✅ 消息气泡展示
-- ✅ 来源引用显示
-- ✅ 加载状态提示
-- ✅ 后端 API 对接
+已实现：
 
-### 待扩展（可选）
-- 🔲 文档上传界面
-- 🔲 历史记录管理
-- 🔲 主题切换
+- 问答聊天界面与消息气泡
+- 检索来源与相似度展示
+- 文档上传（`.txt/.md/.pdf/.doc/.docx`）与知识库文档计数
+- 多轮对话：保存后端回传的 `conversationId` 并在后续请求回传
+- 上传中状态与错误提示
+
+待扩展：
+
+- 历史记录管理
+- 主题切换
+- 流式输出展示
 
 ## API 对接
 
-前端通过 `/api/v1/rag/*` 路径访问后端 API：
+前端通过 `/api/v1/rag/*` 访问后端：
 
-- `POST /api/v1/rag/query` - 问答查询
-- `POST /api/v1/rag/documents` - 上传文档
-- `GET /api/v1/rag/documents` - 获取文档列表
+- `POST /api/v1/rag/query`：问答
+- `POST /api/v1/rag/documents`：上传文档（multipart，字段名 `file`）
+- `GET /api/v1/rag/documents`：文档列表
 
-## 构建部署
+统一响应结构 `ApiResult<T>`：`{ code, message, data }`，`code=0` 表示成功。
+
+## 构建
 
 ```bash
-# 构建
-npm run build
-
-# 生成的文件在 dist/ 目录
+npm run build    # 先执行 tsc 类型检查，再 vite build，产物输出到 dist/
 ```
-
----
-
-**精简原则：最小化前端，聚焦后端核心能力！**

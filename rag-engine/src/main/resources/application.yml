@@ -12,7 +12,8 @@ spring:
       chat:
         options:
           model: ${OPENAI_CHAT_MODEL:deepseek-v4-flash}
-          temperature: 0.7
+          # RAG 生成需强约束于检索内容，低温度可降低幻觉、提升 faithfulness
+          temperature: ${RAG_CHAT_TEMPERATURE:0.2}
       embedding:
         api-key: ${OPENAI_EMBEDDING_API_KEY:${OPENAI_API_KEY:}}
         base-url: ${OPENAI_EMBEDDING_BASE_URL:https://api.openai.com}
@@ -33,10 +34,15 @@ rag:
     chunk-overlap: 200
   retrieval:
     top-k: 5
-    score-threshold: 0.5
+    # DashScope text-embedding-v4 相似度整体偏低（相关片段常落在 0.3~0.5），0.5 会误滤掉有效召回
+    score-threshold: 0.3
   embedding:
     dimension: ${RAG_EMBEDDING_DIMENSION:1536}
     batch-size: ${RAG_EMBEDDING_BATCH_SIZE:10}
+  chat:
+    memory:
+      # Spring AI 会话记忆窗口大小（消息条数），超出后丢弃最旧消息
+      max-messages: ${RAG_CHAT_MEMORY_MAX_MESSAGES:20}
 
 logging:
   level:

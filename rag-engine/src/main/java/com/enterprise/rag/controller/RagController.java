@@ -46,7 +46,7 @@ public class RagController {
         try {
             return ApiResult.ok(ragService.query(request));
         } catch (Exception e) {
-            return ApiResult.fail("查询失败：" + e.getMessage());
+            return ApiResult.fail("查询失败：" + formatQueryError(e));
         }
     }
 
@@ -72,6 +72,20 @@ public class RagController {
         } catch (Exception e) {
             return ApiResult.fail("文档删除失败：" + e.getMessage());
         }
+    }
+
+    private String formatQueryError(Exception e) {
+        Throwable root = e;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String msg = root.getMessage() != null ? root.getMessage() : e.getMessage();
+        if (msg != null && (msg.contains("timeout") || msg.contains("Timeout"))) {
+            return "Chat API 请求超时：推理模型（如 qwen3.7-plus）响应较慢，"
+                + "请确认已重启后端加载 AiHttpClientConfig（读超时 3 分钟），"
+                + "或改用 qwen-plus / qwen-turbo（见 INC-013）";
+        }
+        return msg != null ? msg : root.getClass().getSimpleName();
     }
 
     private String formatUploadError(Exception e) {

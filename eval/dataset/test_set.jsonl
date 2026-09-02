@@ -1,0 +1,30 @@
+{"question": "星云科技有限公司成立于哪一年哪个月？", "ground_truth": "星云科技成立于 2016 年 3 月。", "category": "fact", "notes": "答案在《公司概况》章节"}
+{"question": "星云科技总部位于哪个城市？", "ground_truth": "总部位于杭州。", "category": "fact", "notes": "答案在《公司概况》章节"}
+{"question": "星云智能客服平台包含哪些核心功能模块？", "ground_truth": "智能机器人、工单系统、知识库、质检、报表五个核心功能模块。", "category": "fact", "notes": "答案在《公司概况》章节"}
+{"question": "星云智能客服平台 v4.2.0 版本的发布日期是什么？", "ground_truth": "2025 年 6 月 30 日。", "category": "number", "notes": "答案在《产品与版本》章节，精确日期"}
+{"question": "v4.2.0 版本在工单模块有什么更新？", "ground_truth": "工单系统新增 SLA 自动升级能力，超时自动提升工单优先级并通知负责人。", "category": "fact", "notes": "答案在《产品与版本》章节"}
+{"question": "知识库支持上传哪些文档格式？", "ground_truth": "PDF、Word、Excel、Markdown、TXT 五种格式。", "category": "fact", "notes": "答案在《产品与版本》章节"}
+{"question": "知识库单个文档的上传大小上限是多少？", "ground_truth": "50MB。", "category": "number", "notes": "答案在《产品与版本》章节，精确数字"}
+{"question": "2024 年星云科技的营收是多少？", "ground_truth": "3.2 亿元。", "category": "number", "notes": "答案在《公司概况》章节"}
+{"question": "星云科技的客户续费率是多少？", "ground_truth": "92%。", "category": "number", "notes": "答案在《公司概况》章节"}
+{"question": "星云科技共有多少员工，其中研发多少人？", "ground_truth": "共 1200 人，其中研发 600 人。", "category": "number", "notes": "答案在《公司概况》章节，含两个数字"}
+{"question": "新员工入职满一年后，每年可休多少天年假？", "ground_truth": "每年 12 天年假。", "category": "number", "notes": "答案在《人事制度》章节"}
+{"question": "代码规范采用什么风格？", "ground_truth": "Google Java Style。", "category": "fact", "notes": "答案在《技术规范》章节"}
+{"question": "加班到几点之后可以报销晚餐？", "ground_truth": "21:00 之后。", "category": "number", "notes": "答案在《人事制度》章节，精确时间"}
+{"question": "加班打车报销的单次金额上限是多少？", "ground_truth": "单次上限 100 元。", "category": "number", "notes": "答案在《人事制度》章节"}
+{"question": "发票需要在多少天内提交报销？", "ground_truth": "30 天内。", "category": "number", "notes": "答案在《人事制度》章节"}
+{"question": "报销金额超过多少需要部门总监审批？", "ground_truth": "超过 5000 元。", "category": "number", "notes": "答案在《人事制度》章节"}
+{"question": "事假每年累计不能超过多少天？", "ground_truth": "不超过 15 天。", "category": "number", "notes": "答案在《人事制度》章节"}
+{"question": "单元测试覆盖率的要求是多少？", "ground_truth": "不低于 70%。", "category": "number", "notes": "答案在《技术规范》章节"}
+{"question": "什么情况下可以休病假？", "ground_truth": "需提供医院开具的证明。", "category": "rule", "notes": "答案在《人事制度》章节"}
+{"question": "灰度发布第一步放量比例是多少？", "ground_truth": "先放量 5% 用户。", "category": "rule", "notes": "答案在《项目与发布流程》章节"}
+{"question": "正式的发布窗口是每周的什么时间？", "ground_truth": "每周二、周四 14:00-16:00。", "category": "rule", "notes": "答案在《项目与发布流程》章节"}
+{"question": "P0 级故障的响应时限是多少？", "ground_truth": "15 分钟内响应。", "category": "rule", "notes": "答案在《项目与发布流程》章节"}
+{"question": "核心接口在什么情况下触发告警？", "ground_truth": "P99 延迟超过 800ms 或错误率超过 1% 时触发告警。", "category": "rule", "notes": "答案在《技术规范》章节，含两个条件"}
+{"question": "小李入职 14 个月，今年想休年假，最多能休几天？", "ground_truth": "12 天。入职满一年即可享受每年 12 天年假，小李已满一年。", "category": "composite", "notes": "需要结合年假条件与入职时长推理"}
+{"question": "周五 23:00 加班结束打车回家，能否报销？", "ground_truth": "可以。22:30 之后加班打车可报销，单次上限 100 元，23:00 满足条件。", "category": "composite", "notes": "需要结合时间条件推理"}
+{"question": "请描述灰度发布的完整放量顺序。", "ground_truth": "先放量 5% 用户观察 24 小时，确认错误率无上升后放量至 50%，再观察 24 小时确认无误后放量至 100%。", "category": "composite", "notes": "流程类问题，需完整复述三步"}
+{"question": "工程师想在周三 15:00 发布紧急修复，是否符合发布规范？", "ground_truth": "不符合。发布窗口为每周二、周四 14:00-16:00，周三不在窗口内。", "category": "composite", "notes": "需要将日期映射到发布窗口规则"}
+{"question": "什么是灰度发布？", "ground_truth": "灰度发布是一种分批放量的发布方式：先让少量用户（如 5%）使用新版本，观察无异常后逐步扩大到 50%、100%，以降低发布风险。", "category": "concept", "notes": "概念解释题，答案在《项目与发布流程》章节"}
+{"question": "什么是客户续费率？", "ground_truth": "客户续费率指上一年度的客户中，继续续费使用产品的客户占比。星云科技 2024 年客户续费率为 92%。", "category": "concept", "notes": "概念解释题，结合公司概况数据"}
+{"question": "为什么数据库规范中禁止使用 SELECT *？", "ground_truth": "因为 SELECT * 会查询表中所有字段，导致不必要的字段传输、降低查询性能，且无法利用覆盖索引优化。", "category": "concept", "notes": "概念解释题，答案在《技术规范》章节"}

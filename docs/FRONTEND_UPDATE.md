@@ -1,135 +1,47 @@
-# 项目架构更新说明
+# 前端说明
 
-## 📊 更新内容
+前端是基于 React 18 + Ant Design X 的聊天界面，提供问答与文档上传，通过 Vite 开发服务器代理调用后端 API。
 
-### 新增：最小化前端（选项B）
+## 技术栈
 
-**原因**：
-- 市场要求："负责大模型应用产品的全栈开发（前端+后端+数据库+API）"
-- 2026年招聘JD明确要求前端能力
-- 提升跳槽筹码
+- React 18.3、TypeScript 5.5、Vite 5.4
+- Ant Design X 1.0：`Bubble`、`Sender`、`useXAgent`、`useXChat` 聊天组件
+- Ant Design 5.20：布局、上传等基础组件
+- Axios 1.7：HTTP 调用
 
-**方案**：
-- 前端占比：**10%精力**
-- 后端占比：**90%精力**
-- 技术栈：React + Ant Design X（5分钟快速集成）
-
----
-
-## 🏗️ 完整架构
+## 目录结构
 
 ```
-┌─────────────────────────────────────────────┐
-│         前端层 (React + Ant Design X)        │
-│         10%精力 - 最小化实现                  │
-│                                             │
-│  - AI Chat 问答界面                          │
-│  - 消息气泡展示                              │
-│  - 来源引用显示                              │
-└─────────────────────────────────────────────┘
-                    ↓ HTTP API
-┌─────────────────────────────────────────────┐
-│         后端层 (Java + SpringAI)             │
-│         90%精力 - 核心聚焦                   │
-│                                             │
-│  - 文档解析与切片                            │
-│  - 向量嵌入生成                              │
-│  - 混合检索策略                              │
-│  - 重排序优化                                │
-│  - 对话生成                                  │
-│  - 企业级架构                                │
-└─────────────────────────────────────────────┘
+frontend/
+├── src/
+│   ├── App.tsx        # 聊天主界面：问答、来源展示、文档上传
+│   ├── main.tsx       # 入口
+│   ├── App.css        # 组件样式
+│   └── index.css      # 全局样式
+├── index.html
+├── vite.config.ts     # 端口 3000，/api 代理到 8089
+├── tsconfig.json
+└── package.json
 ```
 
----
+## 与后端的接口约定
 
-## 📁 完整项目结构
+- 所有请求经 Vite 代理转发：`/api` → `http://localhost:8089`。
+- 问答：`POST /api/v1/rag/query`，请求体携带 `question`、`conversationId`、`retrievalParams`。
+- 上传：`POST /api/v1/rag/documents`（multipart，字段名 `file`），接受 `.txt/.md/.pdf/.doc/.docx`。
+- 文档列表：`GET /api/v1/rag/documents`。
+- 后端统一响应结构 `ApiResult<T>`：`{ code, message, data }`，`code=0` 表示成功。
 
-```
-enterprise-rag-agent-zhuyt/
-├── frontend/                      # 前端（10%精力）
-│   ├── src/
-│   │   ├── App.tsx              # AI Chat 主界面
-│   │   ├── main.tsx             # 入口文件
-│   │   └── index.css            # 全局样式
-│   ├── index.html
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── package.json
-│
-├── rag-engine/                    # 后端（90%精力）
-│   ├── src/main/java/
-│   │   ├── config/              # SpringAI配置
-│   │   ├── controller/          # API接口
-│   │   ├── service/             # 核心服务
-│   │   ├── rag/                 # RAG实现
-│   │   └── model/               # 数据模型
-│   ├── pom.xml
-│   └── application.yml
-│
-├── docs/
-│   └── architecture.md           # 架构文档
-│
-└── README.md                     # 项目说明
-```
+## 多轮对话
 
----
+首次问答不传 `conversationId`，由后端生成并在响应中回传；前端用 `useRef` 保存该 ID，后续请求回传以延续会话记忆。这里用 ref 而非 state，是为了避免 `useXAgent` 闭包缓存旧值。
 
-## 🎯 精力分配
+## 运行
 
-| 模块 | 精力占比 | 说明 |
-|------|---------|------|
-| 前端 | 10% | 使用现成UI组件，快速搭建 |
-| 后端 | 90% | 核心RAG能力，深度掌握 |
-
----
-
-## 💡 为什么这样设计？
-
-### 前端最小化的理由：
-1. ✅ **符合市场要求** - 招聘明确要求"全栈开发"
-2. ✅ **精力不分散** - 前端只占10%
-3. ✅ **快速实现** - Ant Design X 5分钟集成
-4. ✅ **学习成本低** - 不需要深入学习前端框架
-
-### 后端核心聚焦的理由：
-1. ✅ **核心价值** - RAG能力是核心竞争力
-2. ✅ **深度掌握** - 90%精力深度学习
-3. ✅ **企业级能力** - SpringAI + LangChain4j
-4. ✅ **薪资溢价** - Java+AI 稀缺人才
-
----
-
-## 🚀 启动方式
-
-### 后端（Java）
-```bash
-cd rag-engine
-mvn spring-boot:run
-# 访问 http://localhost:8080
-```
-
-### 前端（React）
-```bash
+```powershell
 cd frontend
 npm install
-npm run dev
-# 访问 http://localhost:3000
+npm run dev    # http://localhost:3000
 ```
 
----
-
-## 📊 市场匹配度
-
-| 维度 | 匹配度 | 说明 |
-|------|--------|------|
-| 全栈能力 | ⭐⭐⭐⭐⭐ | 前端+后端全覆盖 |
-| 前端技能 | ⭐⭐⭐ | 最小化实现，满足要求 |
-| 后端深度 | ⭐⭐⭐⭐⭐ | 90%精力深度掌握 |
-| 市场需求 | ⭐⭐⭐⭐⭐ | 完全匹配2026招聘要求 |
-| 薪资溢价 | ⭐⭐⭐⭐⭐ | Java+AI+全栈，稀缺人才 |
-
----
-
-**更新时间**: 2026-06-04  
-**决策**: 最小化前端（10%）+ 核心后端（90%）= 最佳平衡点
+生产构建：`npm run build`（先执行 `tsc` 类型检查，再 `vite build`，产物输出到 `dist/`）。
