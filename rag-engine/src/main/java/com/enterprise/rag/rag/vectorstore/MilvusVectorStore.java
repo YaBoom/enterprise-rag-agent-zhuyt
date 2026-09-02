@@ -2,6 +2,7 @@ package com.enterprise.rag.rag.vectorstore;
 
 import com.enterprise.rag.config.RagProperties;
 import com.enterprise.rag.model.Document;
+import com.enterprise.rag.rag.embedding.Bm25SparseVectorizer;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -36,6 +37,9 @@ public class MilvusVectorStore {
     @Autowired
     private RagProperties ragProperties;
 
+    @Autowired
+    private Bm25SparseVectorizer bm25SparseVectorizer;
+
     public void insertDocuments(List<Document> documents) {
         requireClient();
 
@@ -56,6 +60,12 @@ public class MilvusVectorStore {
                 embeddingArray.add(value);
             }
             row.add("embedding", embeddingArray);
+
+            // 混合检索关键词通道：稀疏向量（token id → BM25 权重）
+            JsonObject sparseObj = new JsonObject();
+            bm25SparseVectorizer.vectorize(doc.getContent())
+                .forEach((tokenId, weight) -> sparseObj.addProperty(tokenId.toString(), weight));
+            row.add("sparse", sparseObj);
             rows.add(row);
         }
 

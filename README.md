@@ -8,7 +8,7 @@
 |---|---|
 | 后端框架 | Java 21、Spring Boot 3.3.0、Spring AI 1.0.2 |
 | 文档解析与分块 | LangChain4j 0.36.2（Apache PDFBox、Apache POI） |
-| 向量数据库 | Milvus 2.4.4（COSINE 度量、AUTOINDEX 索引） |
+| 向量数据库 | Milvus 2.4.4（稠密向量 COSINE/AUTOINDEX、稀疏向量 IP/SPARSE_INVERTED_INDEX） |
 | 对话/嵌入模型 | OpenAI 兼容接口（DeepSeek、阿里云百炼 Qwen、OpenAI，见 `.env.example`） |
 | 前端 | React 18、Vite 5、Ant Design X、Ant Design 5、Axios |
 | 离线评估 | Python + RAGAS（见 `eval/`） |
@@ -23,7 +23,7 @@
 | 编排层 | `RagService` | 串联检索 → 重排 → 生成，组装来源与分阶段耗时，挂载会话记忆 |
 | 文档处理 | `DocumentProcessor` | 解析文档并递归分块（chunkSize=1000、overlap=200） |
 | 向量嵌入 | `EmbeddingService` | 调用 Embedding 模型，按 batch 上限分批生成向量 |
-| 检索 | `RetrievalService` | Milvus 向量检索（COSINE），支持请求级 topK 与相似度阈值过滤 |
+| 检索 | `RetrievalService` | 混合检索：向量（COSINE）+ BM25 稀疏向量双通道、RRF 融合；或仅向量检索，支持请求级 topK 与相似度阈值过滤 |
 | 重排 | `RerankService` | 向量相似度与查询词覆盖率融合重排；或按内容去重（DIVERSITY） |
 | 向量存储 | `MilvusVectorStore` | Collection 入库、按 documentId 删除、文档标题列表 |
 | 初始化 | `MilvusCollectionRunner` | 启动时创建 Collection 与向量索引并加载 |
@@ -36,7 +36,7 @@
 
 - 文档解析（PDF、Word、Excel、PPT、Markdown、TXT）与递归分块
 - 向量嵌入、Milvus 入库、检索与按文档删除
-- 向量检索 + 相似度阈值过滤（支持请求级 `topK` / `scoreThreshold`）
+- 混合检索（向量 + BM25 稀疏向量双通道，RRF 融合），支持请求级 `topK` / `scoreThreshold` / `strategy`
 - 轻量重排：向量分与查询词覆盖率融合，或多样性去重
 - 基于检索内容的答案生成，低温度约束以降低幻觉
 - 多轮对话会话记忆
@@ -45,7 +45,6 @@
 
 规划中（尚未实现）：
 
-- 混合检索（向量 + BM25/稀疏向量）
 - Query 改写与扩展
 - 流式问答（SSE）
 - 多租户、权限管理、问答审计
@@ -93,7 +92,7 @@ Base URL：`http://localhost:8089/api/v1/rag`
 {
   "question": "事假有多少天？",
   "conversationId": "可选，用于延续多轮对话",
-  "retrievalParams": { "topK": 5, "scoreThreshold": 0.3, "strategy": "VECTOR", "enableRerank": true }
+  "retrievalParams": { "topK": 5, "scoreThreshold": 0.3, "strategy": "HYBRID", "enableRerank": true }
 }
 ```
 
@@ -111,7 +110,7 @@ Base URL：`http://localhost:8089/api/v1/rag`
 | `rag.chat.memory.max-messages` | 20 | 会话记忆窗口大小（消息条数） |
 | `spring.ai.openai.chat.options.temperature` | 0.2 | 生成温度，低温有利于降低幻觉 |
 
-向量维度或 Collection 结构变更后，需要删除并重建 Milvus Collection。
+向量维度或 Collection 结构变更后，需要删除并重建 Milvus Collection；升级到混合检索后首次启动会检测旧结构并自动重建（原数据需重新上传）。
 
 ## 评估
 
