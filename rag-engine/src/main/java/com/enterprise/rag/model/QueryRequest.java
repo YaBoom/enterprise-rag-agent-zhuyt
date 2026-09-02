@@ -35,8 +35,8 @@ public class QueryRequest {
         private Integer topK = 5;
         /** 相似度阈值：null 时使用全局配置 rag.retrieval.score-threshold（勿设默认值，否则会覆盖全局配置） */
         private Double scoreThreshold;
-        /** 检索策略：当前实现向量检索（VECTOR）；混合检索（HYBRID）为规划项，尚未落地 */
-        private String strategy = "VECTOR";
+        /** 检索策略：HYBRID（向量 + BM25 稀疏向量双通道，RRF 融合，默认）或 VECTOR（仅向量检索） */
+        private String strategy = "HYBRID";
         private Boolean enableRerank = true;
         private List<String> filters;
     }

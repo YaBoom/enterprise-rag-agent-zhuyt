@@ -79,7 +79,7 @@ function App() {
             conversationId: conversationIdRef.current ?? undefined,
             retrievalParams: {
               topK: 5,
-              strategy: 'VECTOR',
+              strategy: 'HYBRID',
               enableRerank: true
             }
           },
@@ -137,7 +137,7 @@ function App() {
             Enterprise RAG Agent
           </Title>
           <Paragraph style={{ margin: 0, color: '#666' }}>
-            企业级智能问答 — Java 21 + Spring AI + LangChain4j
+            企业级智能问答 — Java 21 + Spring AI + Milvus
           </Paragraph>
         </div>
         <Space>

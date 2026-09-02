@@ -12,11 +12,11 @@
   RagController → RagService
         ├── DocumentProcessor   解析 + 递归分块
         ├── EmbeddingService    向量化（分批）
-        ├── RetrievalService    Milvus 向量检索 + 阈值过滤
+        ├── RetrievalService    混合检索（向量 + 稀疏 BM25，RRF 融合）
         ├── RerankService       融合重排 / 去重
         └── Chat 生成           ChatClient + 会话记忆
         ▼
-Milvus 2.4.4 (:19530, COSINE / AUTOINDEX)
+Milvus 2.4.4 (:19530, 稠密 COSINE/AUTOINDEX + 稀疏 IP/SPARSE_INVERTED_INDEX)
 ```
 
 ## 数据流
@@ -31,7 +31,7 @@ Milvus 2.4.4 (:19530, COSINE / AUTOINDEX)
 ### 问答检索
 
 1. `RagService` 解析 conversationId，读取请求级 topK / strategy / scoreThreshold。
-2. `RetrievalService` 对问题向量化后在 Milvus 检索，并按相似度阈值过滤。
+2. `RetrievalService` 按 strategy 执行检索：HYBRID（默认）为稠密向量 + BM25 稀疏向量双通道召回、RRF 融合；VECTOR 为单路向量检索并按相似度阈值过滤。
 3. 若启用重排，`RerankService` 以「向量相似度 + 查询词覆盖率」的融合分重新排序（向量分主导）；用于展示与置信度的分数仍保留原始向量相似度。
 4. `RagService` 拼接上下文并通过 ChatClient 生成答案；system prompt 约束仅依据检索内容作答，生成温度默认 0.2 以降低幻觉。
 5. 会话记忆由 `MessageChatMemoryAdvisor` 按 conversationId 写入与回传。
@@ -59,11 +59,12 @@ Milvus Collection schema（由 `MilvusCollectionRunner` 在启动时创建）：
 | chunk_index | Int32 | 切片序号 |
 | metadata | VarChar(65535) | JSON 元数据 |
 | embedding | FloatVector(dim) | 向量，维度取 `rag.embedding.dimension` |
+| sparse | SparseFloatVector | BM25 稀疏向量（混合检索关键词通道，token id → 权重） |
 
-索引类型 AUTOINDEX，度量方式 COSINE。
+稠密向量索引 AUTOINDEX、度量 COSINE；稀疏向量索引 SPARSE_INVERTED_INDEX、度量 IP。
 
 ## 演进方向
 
-- 检索：混合检索（向量 + BM25 / 稀疏向量）、Query 改写与扩展。
+- 检索：Query 改写与扩展。
 - 生成：流式输出（SSE）、上下文 token 预算控制。
 - 企业特性：多租户隔离、权限管理、问答审计日志、性能监控。
