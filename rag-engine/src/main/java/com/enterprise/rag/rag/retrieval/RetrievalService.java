@@ -30,10 +30,13 @@ public class RetrievalService {
     @Autowired
     private RagProperties ragProperties;
 
-    public RetrievalResult retrieve(String query, Integer topK, String strategy) {
+    public RetrievalResult retrieve(String query, Integer topK, String strategy, Double scoreThreshold) {
         long startTime = System.currentTimeMillis();
         int effectiveTopK = topK != null ? topK : ragProperties.getRetrieval().getTopK();
-        double scoreThreshold = ragProperties.getRetrieval().getScoreThreshold();
+        // 请求级阈值优先（评估实验控制变量），未提供时使用全局配置
+        double effectiveThreshold = scoreThreshold != null
+            ? scoreThreshold
+            : ragProperties.getRetrieval().getScoreThreshold();
 
         List<Document> documents = vectorSearch(query, effectiveTopK);
         List<Double> scores = new ArrayList<>();
@@ -43,7 +46,7 @@ public class RetrievalService {
             double score = doc.getMetadata() != null && doc.getMetadata().get("score") instanceof Number
                 ? ((Number) doc.getMetadata().get("score")).doubleValue()
                 : 0.0;
-            if (score >= scoreThreshold) {
+            if (score >= effectiveThreshold) {
                 filtered.add(doc);
                 scores.add(score);
             }

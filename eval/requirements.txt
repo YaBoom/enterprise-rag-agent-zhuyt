@@ -1,0 +1,8 @@
+# 注意：ragas 必须钉在 0.3.x（最后一个版本 0.3.9），与 langchain 0.3.x 生态配套。
+# 若装成 ragas 0.4.x + langchain-community 1.x，会因 vertexai 模块被移除而 ImportError。
+ragas==0.3.9
+langchain-community>=0.3,<0.4
+langchain-openai>=0.3,<0.4
+python-dotenv>=1.0.0
+requests>=2.31.0
+pandas>=2.0.0

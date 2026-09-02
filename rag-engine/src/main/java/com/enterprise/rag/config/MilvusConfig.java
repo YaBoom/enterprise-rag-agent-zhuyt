@@ -34,7 +34,7 @@ public class MilvusConfig {
                     .build()
             );
         } catch (Exception e) {
-            System.out.println("⚠️ Milvus 连接失败：" + e.getMessage() + "，跳过 Milvus 配置");
+            System.out.println("[Milvus] 连接失败：" + e.getMessage() + "，跳过 Milvus 配置");
             return null;
         }
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Bubble, Sender, useXAgent, useXChat } from '@ant-design/x';
 import { Card, Typography, Layout, Upload, message, Space, Tag } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
@@ -23,12 +23,15 @@ interface QueryResponse {
   }>;
   confidence?: number;
   totalTime?: number;
+  conversationId?: string;
 }
 
 function App() {
   const [content, setContent] = useState('');
   const [uploading, setUploading] = useState(false);
   const [docCount, setDocCount] = useState(0);
+  // 多轮对话会话 ID：用 ref 避免 useXAgent 闭包缓存旧值；首次问答由后端生成并回传，后续请求回传以延续会话记忆
+  const conversationIdRef = useRef<string | null>(null);
 
   const fetchDocCount = async () => {
     try {
@@ -69,14 +72,19 @@ function App() {
     request: async (info, { onSuccess, onError }) => {
       const { message: userMessage } = info;
       try {
-        const response = await axios.post<ApiResult<QueryResponse>>('/api/v1/rag/query', {
-          question: userMessage,
-          retrievalParams: {
-            topK: 5,
-            strategy: 'VECTOR',
-            enableRerank: true
-          }
-        });
+        const response = await axios.post<ApiResult<QueryResponse>>(
+          '/api/v1/rag/query',
+          {
+            question: userMessage,
+            conversationId: conversationIdRef.current ?? undefined,
+            retrievalParams: {
+              topK: 5,
+              strategy: 'VECTOR',
+              enableRerank: true
+            }
+          },
+          { timeout: 180_000 }
+        );
 
         const result = response.data;
         if (result.code !== 0) {
@@ -85,6 +93,10 @@ function App() {
         }
 
         const data = result.data;
+        // 保存后端会话 ID，使多轮对话共享会话记忆
+        if (data.conversationId) {
+          conversationIdRef.current = data.conversationId;
+        }
         let replyContent = data.answer || '';
 
         if (data.sources && data.sources.length > 0) {

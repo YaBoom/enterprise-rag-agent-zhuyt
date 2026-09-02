@@ -1,81 +1,69 @@
-# 架构设计文档
+# 架构设计
 
-## 精简原则
+## 总览
 
-**删除**：
-- ❌ Python Agent层（LangGraph）- 竞争激烈，算法岗为主
-- ❌ Node.js MCP层 - 非核心，可后续扩展
+系统分为三层：前端交互层、Java 后端 RAG 引擎、向量数据库层。后端按职责拆分为 API、编排、RAG 子服务与配置四组；模型通过 OpenAI 兼容接口接入，向量存储使用 Milvus。
 
-**保留**：
-- ✅ Java RAG核心引擎 - 单一聚焦，深度掌握
-
----
-
-## 为什么选择单一Java技术栈？
-
-### 市场数据：
-1. "懂大模型的Java工程师正被疯抢"
-2. "Java开发者薪资溢价40%+"
-3. "企业现有系统多以Java为核心"
-4. "复合型人才极缺：懂Java+AI技术"
-
-### 你的优势：
-- ✅ 8年Java经验，基础扎实
-- ✅ Spring生态熟悉，学习成本低
-- ✅ 企业级开发经验丰富
-
-### 市场空缺：
-- ❌ Python AI岗位竞争激烈（算法岗为主）
-- ❌ 大多数AI人才不懂企业级Java
-- ✅ Java+AI复合型人才极缺
-
----
-
-## 技术架构
-
-### 核心框架
-- **Spring Boot 3.3** - 企业级开发首选
-- **Spring AI 1.0.2** - Spring官方AI框架
-- **LangChain4j 0.36.2** - Java版LangChain
-
-### 向量数据库
-- **Milvus** - 生产级，支持分布式
-- **ChromaDB** - 开发友好（可选）
-
-### 核心模块
 ```
-RAG引擎
-├── 文档解析（DocumentProcessor）
-├── 向量嵌入（EmbeddingService）
-├── 检索服务（RetrievalService）
-├── 重排序（RerankService）
-└── 对话生成（ChatService）
+前端 (React + Ant Design X, :3000)
+        │ HTTP /api（Vite 代理到 :8089）
+        ▼
+后端 RAG 引擎 (Spring Boot 3.3 + Spring AI 1.0.2, :8089)
+  RagController → RagService
+        ├── DocumentProcessor   解析 + 递归分块
+        ├── EmbeddingService    向量化（分批）
+        ├── RetrievalService    Milvus 向量检索 + 阈值过滤
+        ├── RerankService       融合重排 / 去重
+        └── Chat 生成           ChatClient + 会话记忆
+        ▼
+Milvus 2.4.4 (:19530, COSINE / AUTOINDEX)
 ```
 
----
+## 数据流
 
-## 与原方案对比
+### 文档入库
 
-| 维度 | 原方案（三套技术栈） | 精简方案（单一Java） |
-|------|---------------------|---------------------|
-| 技术栈数量 | 3套 | 1套 |
-| 学习难度 | 极高 | 适中 |
-| 精力分散 | 严重 | 聚焦 |
-| 迭代速度 | 慢 | 快 |
-| 市场匹配 | Python竞争激烈 | Java+AI极缺 |
-| 薪资溢价 | 30%+ | **40%+** |
+1. `RagController` 接收 multipart 文件。
+2. `DocumentProcessor` 按类型解析（PDFBox / POI / 纯文本），用 LangChain4j 递归分块（chunkSize=1000、overlap=200），为每块生成两级标识：documentId（整个文件）与 id（单个切片）。
+3. `EmbeddingService` 按 `rag.embedding.batch-size` 分批调用 Embedding 模型生成向量。
+4. `MilvusVectorStore` 将正文、元数据与向量写入 Collection。
 
----
+### 问答检索
 
-## 后续扩展（可选）
+1. `RagService` 解析 conversationId，读取请求级 topK / strategy / scoreThreshold。
+2. `RetrievalService` 对问题向量化后在 Milvus 检索，并按相似度阈值过滤。
+3. 若启用重排，`RerankService` 以「向量相似度 + 查询词覆盖率」的融合分重新排序（向量分主导）；用于展示与置信度的分数仍保留原始向量相似度。
+4. `RagService` 拼接上下文并通过 ChatClient 生成答案；system prompt 约束仅依据检索内容作答，生成温度默认 0.2 以降低幻觉。
+5. 会话记忆由 `MessageChatMemoryAdvisor` 按 conversationId 写入与回传。
 
-**Phase 4后可考虑**：
-- Agent基础能力（LangChain4j内置AI Service）
-- 飞书机器人集成（Java SDK）
-- MCP协议支持（如有需求）
+## 关键设计
 
-**但不强求，保持聚焦！**
+- 两级 ID：documentId 标识整个文件，id 标识每个切片，支持按文件维度批量删除。
+- 请求级检索参数：topK 与 scoreThreshold 支持按请求覆盖全局配置，便于 A/B 评估（见 `eval/`）。
+- 分块策略：LangChain4j 递归分块，优先按段落 / 行 / 句子边界切分，属固定窗口分块（非语义分块）。
+- 相似度阈值：text-embedding-v4 的相似度分布整体偏低，阈值默认 0.3，过高会误滤有效召回。
+- 模型可插拔：Chat 与 Embedding 通过 OpenAI 兼容接口分别配置，可切换 DeepSeek / 百炼 Qwen / OpenAI。
 
----
+## 向量数据库
 
-_核心理念：找准一个点，持续发力，成为市场最稀缺的人才！_
+Milvus Collection schema（由 `MilvusCollectionRunner` 在启动时创建）：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | VarChar(256) | 切片主键 |
+| content | VarChar(65535) | 切片正文 |
+| title | VarChar(512) | 文件标题 |
+| source | VarChar(512) | 来源文件名 |
+| type | VarChar(32) | 文件类型 |
+| document_id | VarChar(256) | 所属文件 ID |
+| chunk_index | Int32 | 切片序号 |
+| metadata | VarChar(65535) | JSON 元数据 |
+| embedding | FloatVector(dim) | 向量，维度取 `rag.embedding.dimension` |
+
+索引类型 AUTOINDEX，度量方式 COSINE。
+
+## 演进方向
+
+- 检索：混合检索（向量 + BM25 / 稀疏向量）、Query 改写与扩展。
+- 生成：流式输出（SSE）、上下文 token 预算控制。
+- 企业特性：多租户隔离、权限管理、问答审计日志、性能监控。

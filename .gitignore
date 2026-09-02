@@ -31,6 +31,12 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 
+# Python（评估脚本虚拟环境与缓存，勿提交）
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
 # 其他
 *.swp
 *.bak

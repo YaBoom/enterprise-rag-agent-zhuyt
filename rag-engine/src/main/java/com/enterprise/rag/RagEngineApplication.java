@@ -45,9 +45,7 @@ public class RagEngineApplication {
 
         app.setDefaultProperties(defaults);
         app.run(args);
-        System.out.println("\n✅ Enterprise RAG Engine 启动成功！");
-        System.out.println("📚 单一Java技术栈，精准定位，持续发力！");
-        System.out.println("🎯 目标：成为市场上最稀缺的Java+AI复合型人才\n");
+        System.out.println("\nEnterprise RAG Engine 启动成功");
     }
 
     private static void logResolvedAiConfig() {
