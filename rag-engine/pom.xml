@@ -137,6 +137,34 @@
                     <jvmArguments>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</jvmArguments>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <!-- 基础镜像：Java 21 运行环境 -->
+<!--                    <from>-->
+<!--                        <image>eclipse-temurin:21-jre-jammy</image>-->
+<!--                    </from>-->
+                    <from>
+                        <image>docker.m.daocloud.io/eclipse-temurin:21-jre-jammy</image>
+                    </from>
+                    <!-- 目标镜像仓库；tag 由命令行 -Djib.to.tags 覆盖 -->
+                    <to>
+                        <image>localhost:5000/rag-engine</image>
+                    </to>
+                    <container>
+                        <ports><port>8089</port></ports>
+                        <jvmFlags>
+                            <jvmFlag>-Dfile.encoding=UTF-8</jvmFlag>
+                            <jvmFlag>-Duser.timezone=Asia/Shanghai</jvmFlag>
+                        </jvmFlags>
+                        <!-- 关键：允许推到本地 insecure registry -->
+                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                    </container>
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
